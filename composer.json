@@ -1,0 +1,22 @@
+{
+    "name": "rikmeijer/nc-mediacleaner",
+    "description": "Tool to cleanup media files in Nextcloud",
+    "type": "project",
+    "require": {
+        "php": "^8.4",
+        "sabre/dav": "^4.7",
+        "vlucas/phpdotenv": "^5.6"
+    },
+    "license": "MIT",
+    "autoload": {
+        "psr-4": {
+            "Rikmeijer\\NCMediaCleaner\\": "src/"
+        }
+    },
+    "authors": [
+        {
+            "name": "Rik Meijer",
+            "email": "hello@rikmeijer.nl"
+        }
+    ]
+}
