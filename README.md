@@ -12,4 +12,4 @@ $ php nc-mediacleaner.php
 
 # If you like this tool
 
-Donations are welcome: [Lightning](lightning:spinalphone02@walletofsatoshi.com) • [PayPal](https://www.paypal.com/donate/?hosted_button_id=B3WRGUUNZVDCL)
+Donations are [welcome](https://rikmeijer.github.io)
