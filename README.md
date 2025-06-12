@@ -9,3 +9,7 @@ NEXTCLOUD_PASSWORD=secret # Optional, overwrites password in NEXTCLOUD_URL
 ```
 $ php nc-mediacleaner.php
 ```
+
+# If you like this tool
+
+Donations are welcome: [Lightning](spinalphone02@walletofsatoshi.com) • [PayPal](https://www.paypal.com/donate/?hosted_button_id=B3WRGUUNZVDCL)
