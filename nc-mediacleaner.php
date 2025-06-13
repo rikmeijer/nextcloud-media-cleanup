@@ -54,7 +54,10 @@ $propfind = fn(string $path) => array_slice($attempt('propfind', $path, [
             '{DAV:}getcontentlength'
                         ], 1), 1);
 
+IO::write("Moving files to the right location based on name or creation time");
 foreach ($propfind($files_base_path . NEXTCLOUD_UPLOAD_PATH) as $year_directory_id => $available_year_directory) {
+    break;
+
     $year = basename($year_directory_id);
 
     foreach ($propfind($year_directory_id) as $month_directory_id => $available_month_directory) {
@@ -87,5 +90,77 @@ foreach ($propfind($files_base_path . NEXTCLOUD_UPLOAD_PATH) as $year_directory_
                 ]);
             }
         }
+    }
+}
+
+IO::write("Finding similar files");
+
+$options = $attempt('options');
+if (in_array("nextcloud-checksum-update", $options) === false) {
+    IO::write('Cannot update checksum, so media comparison is impossible');
+    exit;
+}
+
+$duplicate_candidates = [];
+foreach ($propfind($files_base_path . NEXTCLOUD_UPLOAD_PATH) as $year_directory_id => $available_year_directory) {
+    $year = basename($year_directory_id);
+
+    foreach ($propfind($year_directory_id) as $month_directory_id => $available_month_directory) {
+        $month = basename($month_directory_id);
+        $actual_location = $year . '/' . $month;
+        $available_media_files = array_slice($attempt('propfind', $month_directory_id, [
+            '{DAV:}displayname',
+            '{DAV:}getcontentlength',
+            '{http://nextcloud.org/ns}creation_time',
+            '{http://owncloud.org/ns}checksums'
+                        ], 1), 1);
+
+        IO::write($actual_location . ': ' . count($available_media_files) . ' files');
+        $possible_similar_groups = [];
+        foreach ($available_media_files as $file_id => $available_media_file) {
+            $hash = null;
+
+            if (array_key_exists('{http://owncloud.org/ns}checksums', $available_media_file)) {
+                foreach ($available_media_file['{http://owncloud.org/ns}checksums'] as $checksum) {
+                    list($algo, $possible_hash) = explode(':', $checksum['value'], 2);
+                    if (strcasecmp($algo, 'md5') === 0) {
+                        $hash = $possible_hash;
+                        break;
+                    }
+                }
+            }
+
+
+            if (isset($hash) === false) {
+                $attempt('request', 'PATCH', $file_id, headers: [
+                    'X-Recalculate-Hash' => 'md5'
+                ]);
+                $file = $attempt('request', 'HEAD', $file_id, headers: [
+                    'X-Hash' => 'md5'
+                ]);
+                foreach ($file['headers']['oc-checksum'] as $checksum) {
+                    list($algo, $hash) = explode(':', $checksum, 2);
+                    if (strcasecmp($algo, 'md5') === 0) {
+                        break;
+                    }
+                }
+            }
+
+            if (isset($duplicate_candidates[$hash]) === false) {
+                $duplicate_candidates[$hash] = [];
+            }
+            $duplicate_candidates[$hash][$file_id] = $available_media_file;
+        }
+    }
+}
+
+$duplicates = array_filter($duplicate_candidates, fn(array $item) => count($item) > 1);
+if (count($duplicates) === 0) {
+    IO::write("Found no duplicate files");
+} else {
+    IO::write("Found " . count($similar_groups) . " duplicate files");
+    foreach ($duplicates as $duplicate_group) {
+        var_Dump($duplicate_group);
+        exit;
     }
 }

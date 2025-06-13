@@ -15,13 +15,13 @@ class Attempt {
         $attempts = 0;
         do {
             $attempts++;
-            IO::write('attempt #' . $attempts . ' to ' . $method);
             try {
                 return $this->client->$method(...$args);
             } catch (Sabre\HTTP\ClientException $e) {
                 if ($attempts === 5) {
                     throw $e;
                 } else {
+                    IO::write('attempt #' . $attempts . ' to ' . $method);
                     IO::write('attempt failed, retrying in 10 seconds...');
                     sleep(10);
                 }
