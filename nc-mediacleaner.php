@@ -206,9 +206,11 @@ if (count($duplicates) === 0) {
     return IO::write("Found no duplicate files");
 }
 
-IO::write("Found " . count($duplicates) . " duplicate files");
+$total_duplicates = count($duplicates);
+$current = 0;
+IO::write("Found " . $total_duplicates . " duplicate files");
 foreach ($duplicates as $duplicate_hash => $duplicate_group) {
-    IO::write('Duplicate group ' . $duplicate_hash);
+    IO::write(++$current . ' of ' . $total_duplicates . ': ' . $duplicate_hash);
     $selection = [];
     foreach ($duplicate_group as $duplicate_path => $duplicate) {
         IO::write('[' . count($selection) . '] ' . $duplicate_path . ' (created ' . date('r', $duplicate['{http://nextcloud.org/ns}creation_time']) . '; ' . $duplicate['{DAV:}getcontentlength'] . ' B)');
