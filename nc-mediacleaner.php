@@ -110,8 +110,6 @@ foreach ($attempt('propfind', $files_base_path . NEXTCLOUD_UPLOAD_PATH, $media_p
         continue;
     }
 
-    $file_name = basename($file_path);
-
     $expected_location = date('Y/m', $available_media_file['{http://nextcloud.org/ns}creation_time']);
     foreach ($file_regexes as $file_regex) {
         if (preg_match('/' . $file_regex . '/', $available_media_file['{DAV:}displayname'], $match, PREG_UNMATCHED_AS_NULL) !== 1) {
@@ -151,7 +149,7 @@ foreach ($attempt('propfind', $files_base_path . NEXTCLOUD_UPLOAD_PATH, $media_p
         }
         break;
     }
-    $destination = $files_base_path . NEXTCLOUD_UPLOAD_PATH . '/' . $expected_location . '/' . $file_name;
+    $destination = $files_base_path . NEXTCLOUD_UPLOAD_PATH . '/' . $expected_location . '/' . basename($file_path);
 
     if ($file_path !== $destination) {
         IO::write('Actual locaton (' . $cleanpath($file_path) . ') differs from expected ' . $cleanpath($destination) . ', moving file.');
@@ -163,35 +161,39 @@ foreach ($attempt('propfind', $files_base_path . NEXTCLOUD_UPLOAD_PATH, $media_p
         }
     }
 
+    if (preg_match('/^[\w]{13}\-(?<filename>.*)/', $available_media_file['{DAV:}displayname'], $match, PREG_UNMATCHED_AS_NULL) === 1) {
+        // file name starts with an uniqid (way to prevent overwrite same filenames in gp2nc script)
+        $lastdotpos = strrpos($match['filename'], '.');
+        $filename = substr($match['filename'], 0, $lastdotpos);
+        $extension = substr($match['filename'], $lastdotpos + 1);
 
-    $hash = null;
+        if (preg_match('/\(\d+\)$/', $filename, $increment_counter_match) === 1) {
+            $filename = substr($filename, 0, 0 - strlen($increment_counter_match[0]));
+        }
 
-    if (array_key_exists('{http://owncloud.org/ns}checksums', $available_media_file)) {
-        foreach ($available_media_file['{http://owncloud.org/ns}checksums'] as $checksum) {
-            list($algo, $possible_hash) = explode(':', $checksum['value'], 2);
-            if (strcasecmp($algo, 'md5') === 0) {
-                $hash = $possible_hash;
-                break;
+        $available_filename = $filename . '.' . $extension;
+        $tries = 0;
+        do {
+            try {
+                IO::write('Trying ' . $available_filename);
+                $existing_file = $attempt('propfind', dirname($file_path) . '/' . urlencode($available_filename), $media_properties);
+                $available_filename = $filename . '(' . ++$tries . ').' . $extension;
+            } catch (Sabre\HTTP\ClientHttpException $e) {
+                $existing_file = null;
             }
+        } while (isset($existing_file));
+
+
+        if ($move($file_path, dirname($file_path) . '/' . urlencode($available_filename))) {
+            IO::write('Stripped of uniq id prefix (' . $available_media_file['{DAV:}displayname'] . ' --> ' . $available_filename . ')');
+            $file_path = dirname($file_path) . '/' . urlencode($available_filename);
+            $available_media_file['{DAV:}displayname'] = $available_filename;
+        } else {
+            IO::write('Failed stripping uniq id prefix');
         }
     }
 
-
-    if (isset($hash) === false) {
-        IO::write($file_path . ": hash recalc");
-        $attempt('request', 'PATCH', $file_path, headers: [
-            'X-Recalculate-Hash' => 'md5'
-        ]);
-        $file = $attempt('request', 'HEAD', $file_path, headers: [
-            'X-Hash' => 'md5'
-        ]);
-        foreach ($file['headers']['oc-checksum'] as $checksum) {
-            list($algo, $hash) = explode(':', $checksum, 2);
-            if (strcasecmp($algo, 'md5') === 0) {
-                break;
-            }
-        }
-    }
+    $hash = \Rikmeijer\NCMediaCleaner\Hash::retrieve($attempt, $file_path, $available_media_file);
 
     if (isset($duplicate_candidates[$hash]) === false) {
         $duplicate_candidates[$hash] = [];
