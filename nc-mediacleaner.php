@@ -144,18 +144,7 @@ foreach ($attempt('propfind', $files_base_path . NEXTCLOUD_UPLOAD_PATH, $media_p
             $filename = substr($filename, 0, 0 - strlen($increment_counter_match[0]));
         }
 
-        $available_filename = $filename . '.' . $extension;
-        $tries = 0;
-        do {
-            try {
-                IO::write('Trying ' . $available_filename);
-                $existing_file = $attempt('propfind', dirname($file_path) . '/' . urlencode($available_filename), $media_properties);
-                $available_filename = $filename . '(' . ++$tries . ').' . $extension;
-            } catch (Sabre\HTTP\ClientHttpException $e) {
-                $existing_file = null;
-            }
-        } while (isset($existing_file));
-
+        $available_filename = \Rikmeijer\NCMediaCleaner\RemoteFile::findAvailable(fn(string $available_filename) => $attempt('propfind', dirname($file_path) . '/' . urlencode($available_filename), $media_properties), $filename, $extension);
 
         if ($move($file_path, dirname($file_path) . '/' . urlencode($available_filename))) {
             IO::write('Stripped of uniq id prefix (' . $available_media_file['{DAV:}displayname'] . ' --> ' . $available_filename . ')');

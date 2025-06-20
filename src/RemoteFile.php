@@ -4,6 +4,22 @@ namespace Rikmeijer\NCMediaCleaner;
 
 class RemoteFile {
 
+    static function findAvailable(callable $test, $filename, $extension) {
+        $available_filename = $filename . '.' . $extension;
+        $tries = 0;
+        do {
+            try {
+                IO::write('Trying ' . $available_filename);
+                $existing_file = $test($available_filename);
+                $available_filename = $filename . '(' . ++$tries . ').' . $extension;
+            } catch (Sabre\HTTP\ClientHttpException $e) {
+                $existing_file = null;
+            }
+        } while (isset($existing_file));
+
+        return $available_filename;
+    }
+
     static function move(callable $attempt): callable {
         return function (string $file_path, string $destination) use ($attempt): bool {
             $result = $attempt('request', 'MOVE', $file_path, headers: [
