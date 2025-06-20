@@ -75,34 +75,7 @@ if (in_array("nextcloud-checksum-update", $options) === false) {
 
 $cleanpath = fn(string $fullpath) => str_replace($files_base_path, '', $fullpath);
 
-$move = function (string $file_path, string $destination) use ($attempt, &$move): bool {
-    $result = $attempt('request', 'MOVE', $file_path, headers: [
-        'Destination' => $destination,
-        'Overwrite' => 'F'
-    ]);
-
-    switch ($result['statusCode']) {
-        case 409:
-            IO::write('destination is missing');
-            $result = $attempt('request', 'MKCOL', dirname($destination));
-            return $result['statusCode'] === 201 ? $move($file_path, $destination) : false;
-
-        case 412:
-            IO::write('destination already exists');
-            return false;
-
-        case 415:
-            IO::write('destination is not a collection');
-            return false;
-
-        case 201:
-            return true;
-
-        default:
-            IO::write($result['statusCode']);
-            return false;
-    }
-};
+$move = \Rikmeijer\NCMediaCleaner\RemoteFile::move($attempt);
 
 $duplicate_candidates = [];
 foreach ($attempt('propfind', $files_base_path . NEXTCLOUD_UPLOAD_PATH, $media_properties, 3) as $file_path => $available_media_file) {
