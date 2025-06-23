@@ -83,7 +83,7 @@ foreach ($attempt('propfind', $files_base_path . NEXTCLOUD_UPLOAD_PATH, $media_p
         continue;
     }
 
-    $existsTest = fn(string $available_filename) => $attempt('propfind', dirname($file_path) . '/' . urlencode($available_filename), $media_properties);
+    $existsTest = \Rikmeijer\NCMediaCleaner\RemoteFile::existsTest($attempt, dirname($file_path), $media_properties);
 
     $expected_location = date('Y/m', $available_media_file['{http://nextcloud.org/ns}creation_time']);
     foreach ($file_regexes as $file_regex) {

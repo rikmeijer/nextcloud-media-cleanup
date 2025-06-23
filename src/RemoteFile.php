@@ -4,6 +4,10 @@ namespace Rikmeijer\NCMediaCleaner;
 
 class RemoteFile {
 
+    static function existsTest(callable $attempt, string $directory, array $media_properties): callable {
+        return fn(string $available_filename) => $attempt('propfind', $directory . '/' . urlencode($available_filename), $media_properties);
+    }
+
     static function findAvailable(callable $test, string $orig_filename) {
         $lastdotpos = strrpos($orig_filename, '.');
         $filename = substr($orig_filename, 0, $lastdotpos);
