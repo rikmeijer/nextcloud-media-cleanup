@@ -83,6 +83,8 @@ foreach ($attempt('propfind', $files_base_path . NEXTCLOUD_UPLOAD_PATH, $media_p
         continue;
     }
 
+    $existsTest = fn(string $available_filename) => $attempt('propfind', dirname($file_path) . '/' . urlencode($available_filename), $media_properties);
+
     $expected_location = date('Y/m', $available_media_file['{http://nextcloud.org/ns}creation_time']);
     foreach ($file_regexes as $file_regex) {
         if (preg_match('/' . $file_regex . '/', $available_media_file['{DAV:}displayname'], $match, PREG_UNMATCHED_AS_NULL) !== 1) {
@@ -136,15 +138,8 @@ foreach ($attempt('propfind', $files_base_path . NEXTCLOUD_UPLOAD_PATH, $media_p
 
     if (preg_match('/^[\w]{13}\-(?<filename>.*)/', $available_media_file['{DAV:}displayname'], $match, PREG_UNMATCHED_AS_NULL) === 1) {
         // file name starts with an uniqid (way to prevent overwrite same filenames in gp2nc script)
-        $lastdotpos = strrpos($match['filename'], '.');
-        $filename = substr($match['filename'], 0, $lastdotpos);
-        $extension = substr($match['filename'], $lastdotpos + 1);
 
-        if (preg_match('/\(\d+\)$/', $filename, $increment_counter_match) === 1) {
-            $filename = substr($filename, 0, 0 - strlen($increment_counter_match[0]));
-        }
-
-        $available_filename = \Rikmeijer\NCMediaCleaner\RemoteFile::findAvailable(fn(string $available_filename) => $attempt('propfind', dirname($file_path) . '/' . urlencode($available_filename), $media_properties), $filename, $extension);
+        $available_filename = \Rikmeijer\NCMediaCleaner\RemoteFile::findAvailable($existsTest, $match['filename']);
 
         if ($move($file_path, dirname($file_path) . '/' . urlencode($available_filename))) {
             IO::write('Stripped of uniq id prefix (' . $available_media_file['{DAV:}displayname'] . ' --> ' . $available_filename . ')');

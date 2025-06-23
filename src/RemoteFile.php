@@ -4,7 +4,15 @@ namespace Rikmeijer\NCMediaCleaner;
 
 class RemoteFile {
 
-    static function findAvailable(callable $test, $filename, $extension) {
+    static function findAvailable(callable $test, string $orig_filename) {
+        $lastdotpos = strrpos($orig_filename, '.');
+        $filename = substr($orig_filename, 0, $lastdotpos);
+        $extension = substr($orig_filename, $lastdotpos + 1);
+
+        if (preg_match('/\(\d+\)$/', $filename, $increment_counter_match) === 1) {
+            $filename = substr($filename, 0, 0 - strlen($increment_counter_match[0]));
+        }
+
         $available_filename = $filename . '.' . $extension;
         $tries = 0;
         do {
